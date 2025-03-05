@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo de Estudio Interactivo</title>
+  <style>
+    /* RESET Y BASE */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; font-family: Arial, sans-serif; }
+    body.light { background-color: #fff; color: #000; }
+    body.dark { background-color: #000; color: #fff; }
+    /* CONTENEDOR GENERAL */
+    .container {
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    /* VISTAS COMUNES */
+    .view { display: none; width: 100%; height: 100%; }
+    .view.active { display: block; }
+    /* VISTA DE SELECCIÓN DE MAZO */
+    .folder-view { padding: 20px; overflow-y: auto; }
+    .folder-list { list-style: none; margin: 10px 0; }
+    .folder-item {
+      padding: 15px; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 5px;
+      cursor: pointer; background: #f0f0f0;
+      transition: background 0.3s;
+    }
+    .folder-item:hover { background: #e0e0e0; }
+    /* INTERFAZ DE ESTUDIO */
+    .study-interface { display: flex; flex-direction: column; height: 100%; }
+    /* PANEL SUPERIOR – BARRA DE PROGRESO */
+    .top-panel {
+      flex: 0 0 50px; display: flex; align-items: center;
+      padding: 0 10px; background: #ddd; overflow-x: auto;
+    }
+    .progress-item {
+      width: 30px; height: 30px; margin: 0 5px;
+      border-radius: 50%; background: #bbb;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9em; cursor: pointer;
+    }
+    /* INDICADORES DE DIFICULTAD */
+    .diff-facil { background: green; color: white; }
+    .diff-medio { background: yellow; color: black; }
+    .diff-dificil { background: red; color: white; }
+    /* ÁREA CENTRAL – TARJETA */
+    .card-container {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      position: relative; perspective: 1000px; overflow: hidden;
+    }
+    .card {
+      width: 90%; max-width: 600px; min-height: 300px;
+      background: #fff; border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.6s; transform-style: preserve-3d;
+      position: relative;
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .card-face {
+      position: absolute; width: 100%; height: 100%;
+      backface-visibility: hidden;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 20px; text-align: center;
+    }
+    .card-face.back { transform: rotateY(180deg); }
+    .card-face.explanation { transform: rotateY(360deg); }
+    /* Opciones para preguntas tipo TEST */
+    .option-list { list-style: none; margin-top: 20px; padding: 0; width: 100%; }
+    .option-item {
+      padding: 10px; margin: 5px 0;
+      border: 1px solid #ccc; border-radius: 5px;
+      cursor: pointer; background: #f9f9f9;
+      transition: background 0.3s;
+    }
+    .option-item.correct { background: #a0e7a0; }
+    .option-item.incorrect { background: #e7a0a0; }
+    /* PANEL DERECHO – CONTROLES */
+    .right-panel {
+      position: absolute; top: 50px; right: 0;
+      width: 60px; height: calc(100% - 50px);
+      background: rgba(200,200,200,0.8);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 10px 0;
+    }
+    .control-button {
+      margin: 10px 0; padding: 10px;
+      border: none; background: #444; color: #fff;
+      border-radius: 5px; cursor: pointer;
+      transition: background 0.3s;
+    }
+    .control-button:hover { background: #666; }
+    /* FLECHAS DE NAVEGACIÓN */
+    .nav-arrows {
+      position: absolute; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 20px;
+    }
+    .arrow-button {
+      padding: 10px 15px; border: none;
+      background: #444; color: #fff; border-radius: 5px;
+      cursor: pointer; transition: background 0.3s;
+    }
+    .arrow-button:hover { background: #666; }
+  </style>
+</head>
+<body class="light">
+  <div class="container">
+    <!-- Vista de Selección de Mazo -->
+    <div id="folderView" class="view folder-view active">
+      <h1>Selecciona Mazo de Preguntas</h1>
+      <div id="folderSelection">
+        <!-- Se cargará la estructura de carpetas dinámicamente -->
+      </div>
+    </div>
+    <!-- Vista de Estudio -->
+    <div id="studyView" class="view study-interface">
+      <!-- Panel Superior: Barra de Progreso -->
+      <div class="top-panel" id="progressBar">
+        <!-- Elementos de progreso se agregarán dinámicamente -->
+      </div>
+      <!-- Área Central: Tarjeta -->
+      <div class="card-container">
+        <div id="card" class="card">
+          <!-- Cara 1: Pregunta -->
+          <div class="card-face front" id="cardQuestion"></div>
+          <!-- Cara 2: Respuesta -->
+          <div class="card-face back" id="cardAnswer"></div>
+          <!-- Cara 3: Explicación -->
+          <div class="card-face explanation" id="cardExplanation"></div>
+        </div>
+      </div>
+      <!-- Panel Derecho: Controles -->
+      <div class="right-panel">
+        <button class="control-button" id="backButton">Regresar</button>
+        <button class="control-button" id="toggleMode">Modo Claro/Oscuro</button>
+        <button class="control-button" id="diffFacil">Fácil</button>
+        <button class="control-button" id="diffMedio">Medio</button>
+        <button class="control-button" id="diffDificil">Difícil</button>
+      </div>
+      <!-- Flechas de Navegación -->
+      <div class="nav-arrows">
+        <button class="arrow-button" id="prevBtn">&larr; Anterior</button>
+        <button class="arrow-button" id="flipBtn">Flip</button>
+        <button class="arrow-button" id="nextBtn">Siguiente &rarr;</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // URL del Apps Script – REEMPLAZAR "YOUR_SCRIPT_ID" con el ID de despliegue correspondiente
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxwd6VlPcXJd1Pr2L21ujJElTew3Nm6T0h24r2HN99k0r0PSnuVaYjInQ9L6MbRs-GQ/exec';
+    
+    // Variables globales para estructura y mazo
+    let structure = {};  // { categories: [ { name, subjects: [ { name, topics: [ { name } ] } ] } ] }
+    let deck = [];       // Array de objetos pregunta para el tema seleccionado
+    let currentQuestionIndex = 0;
+    let currentFace = 0; // 0: Pregunta, 1: Respuesta, 2: Explicación
+    let currentSelection = { category: null, subject: null, topic: null };
+
+    // --- CARGA DE ESTRUCTURA Y SELECCIÓN DE MAZO ---
+    function loadStructure() {
+      fetch(scriptURL + '?action=getStructure')
+        .then(res => res.json())
+        .then(data => {
+          if(data.status === 'success') {
+            structure = data.data;  // { categories: [...] }
+            renderFolderSelection();
+          } else {
+            alert('Error al cargar la estructura: ' + data.message);
+          }
+        })
+        .catch(err => console.error(err));
+    }
+    function renderFolderSelection() {
+      const container = document.getElementById('folderSelection');
+      container.innerHTML = '';
+      // Se muestran las Categorías
+      const catDiv = document.createElement('div');
+      catDiv.innerHTML = '<h2>Categorías</h2>';
+      const catList = document.createElement('ul');
+      catList.className = 'folder-list';
+      structure.categories.forEach((cat, idx) => {
+        const li = document.createElement('li');
+        li.className = 'folder-item';
+        li.textContent = cat.name;
+        li.onclick = () => selectCategory(idx);
+        catList.appendChild(li);
+      });
+      catDiv.appendChild(catList);
+      container.appendChild(catDiv);
+    }
+    function selectCategory(index) {
+      currentSelection.category = structure.categories[index];
+      const container = document.getElementById('folderSelection');
+      container.innerHTML = '';
+      const subDiv = document.createElement('div');
+      subDiv.innerHTML = `<h2>Asignaturas en ${currentSelection.category.name}</h2>`;
+      const subList = document.createElement('ul');
+      subList.className = 'folder-list';
+      currentSelection.category.subjects.forEach((sub, idx) => {
+        const li = document.createElement('li');
+        li.className = 'folder-item';
+        li.textContent = sub.name;
+        li.onclick = () => selectSubject(idx);
+        subList.appendChild(li);
+      });
+      subDiv.appendChild(subList);
+      const backBtn = document.createElement('button');
+      backBtn.textContent = 'Regresar';
+      backBtn.onclick = () => renderFolderSelection();
+      subDiv.appendChild(backBtn);
+      container.appendChild(subDiv);
+    }
+    function selectSubject(index) {
+      currentSelection.subject = currentSelection.category.subjects[index];
+      const container = document.getElementById('folderSelection');
+      container.innerHTML = '';
+      const topicDiv = document.createElement('div');
+      topicDiv.innerHTML = `<h2>Temas en ${currentSelection.subject.name}</h2>`;
+      const topicList = document.createElement('ul');
+      topicList.className = 'folder-list';
+      currentSelection.subject.topics.forEach((top, idx) => {
+        const li = document.createElement('li');
+        li.className = 'folder-item';
+        li.textContent = top.name;
+        li.onclick = () => selectTopic(idx);
+        topicList.appendChild(li);
+      });
+      topicDiv.appendChild(topicList);
+      const backBtn = document.createElement('button');
+      backBtn.textContent = 'Regresar';
+      backBtn.onclick = () => selectCategory(structure.categories.indexOf(currentSelection.category));
+      topicDiv.appendChild(backBtn);
+      container.appendChild(topicDiv);
+    }
+    function selectTopic(index) {
+      currentSelection.topic = currentSelection.subject.topics[index];
+      // Una vez seleccionado el tema, se carga el mazo de preguntas
+      loadDeck(currentSelection.category.name, currentSelection.subject.name, currentSelection.topic.name);
+    }
+    function loadDeck(category, subject, topic) {
+      fetch(`${scriptURL}?action=getDeck&category=${encodeURIComponent(category)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`)
+        .then(res => res.json())
+        .then(data => {
+          if(data.status === 'success') {
+            deck = data.data.questions;
+            // Buscar la primera pregunta sin clasificar dificultad
+            const firstUnclassified = deck.findIndex(q => !q.dificultad || q.dificultad.trim() === '');
+            currentQuestionIndex = firstUnclassified !== -1 ? firstUnclassified : 0;
+            currentFace = 0;
+            // Cambiar a vista de estudio
+            document.getElementById('folderView').classList.remove('active');
+            document.getElementById('studyView').classList.add('active');
+            renderProgressBar();
+            renderCard();
+          } else {
+            alert('Error al cargar el mazo: ' + data.message);
+          }
+        })
+        .catch(err => console.error(err));
+    }
+
+    // --- INTERFAZ DE ESTUDIO ---
+    // Panel Superior: Barra de Progreso
+    function renderProgressBar() {
+      const progressBar = document.getElementById('progressBar');
+      progressBar.innerHTML = '';
+      deck.forEach((q, idx) => {
+        const item = document.createElement('div');
+        item.className = 'progress-item';
+        item.textContent = idx + 1;
+        if(q.dificultad) {
+          if(q.dificultad.toLowerCase() === 'fácil') item.classList.add('diff-facil');
+          else if(q.dificultad.toLowerCase() === 'medio') item.classList.add('diff-medio');
+          else if(q.dificultad.toLowerCase() === 'difícil') item.classList.add('diff-dificil');
+        }
+        item.onclick = () => { currentQuestionIndex = idx; currentFace = 0; renderCard(); };
+        progressBar.appendChild(item);
+      });
+    }
+    // Renderizar tarjeta actual
+    function renderCard() {
+      if(deck.length === 0) return;
+      const questionObj = deck[currentQuestionIndex];
+      const cardQuestion = document.getElementById('cardQuestion');
+      const cardAnswer = document.getElementById('cardAnswer');
+      const cardExplanation = document.getElementById('cardExplanation');
+      cardQuestion.innerHTML = '';
+      cardAnswer.innerHTML = '';
+      cardExplanation.innerHTML = '';
+
+      // Cara 1: Pregunta
+      if(questionObj['Test o Flashcard'].toLowerCase() === 'test') {
+        const qText = document.createElement('div');
+        qText.textContent = questionObj.Pregunta;
+        cardQuestion.appendChild(qText);
+        const options = questionObj.Respuesta.split('/');
+        const correctAnswer = options[0].trim();
+        const shuffled = options.sort(() => Math.random() - 0.5);
+        const optionList = document.createElement('ul');
+        optionList.className = 'option-list';
+        shuffled.forEach(opt => {
+          const li = document.createElement('li');
+          li.className = 'option-item';
+          li.textContent = opt.trim();
+          li.onclick = () => {
+            if(opt.trim() === correctAnswer) { li.classList.add('correct'); }
+            else { li.classList.add('incorrect'); }
+          };
+          optionList.appendChild(li);
+        });
+        cardQuestion.appendChild(optionList);
+      } else {
+        cardQuestion.textContent = questionObj.Pregunta;
+      }
+      // Cara 2: Respuesta
+      cardAnswer.textContent = questionObj.Respuesta;
+      // Cara 3: Explicación
+      cardExplanation.textContent = questionObj.Explicación;
+
+      // Ajustar la visualización de la tarjeta según currentFace
+      const card = document.getElementById('card');
+      card.classList.remove('flipped');
+      if(currentFace === 1) { card.classList.add('flipped'); }
+      else if(currentFace === 2) {
+        // Para mostrar explicación, se puede implementar efecto adicional si se desea
+        card.classList.add('flipped');
+      }
+    }
+    // Navegación: siguiente, anterior y flip de tarjeta
+    function nextQuestion() {
+      if(!deck[currentQuestionIndex].dificultad || deck[currentQuestionIndex].dificultad.trim() === '') {
+        updateDifficulty(deck[currentQuestionIndex], 'Fácil');
+      }
+      if(currentQuestionIndex < deck.length - 1) { currentQuestionIndex++; currentFace = 0; renderProgressBar(); renderCard(); }
+    }
+    function prevQuestion() {
+      if(currentQuestionIndex > 0) { currentQuestionIndex--; currentFace = 0; renderCard(); }
+    }
+    function flipCard() {
+      currentFace = (currentFace + 1) % 3;
+      renderCard();
+    }
+    // Actualizar dificultad a través de Apps Script
+    function updateDifficulty(questionObj, difficulty) {
+      questionObj.dificultad = difficulty;
+      const payload = {
+        action: 'updateDifficulty',
+        category: questionObj.Categoría,
+        subject: questionObj.Asignatura,
+        topic: questionObj.Tema,
+        id: questionObj['id#'],
+        difficulty: difficulty
+      };
+      fetch(scriptURL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => { if(data.status === 'success') { renderProgressBar(); } else { console.error('Error al actualizar dificultad:', data.message); } })
+      .catch(err => console.error(err));
+    }
+    // --- EVENTOS DE CONTROLES ---
+    document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+    document.getElementById('prevBtn').addEventListener('click', prevQuestion);
+    document.getElementById('flipBtn').addEventListener('click', flipCard);
+    document.getElementById('backButton').addEventListener('click', () => {
+      document.getElementById('studyView').classList.remove('active');
+      document.getElementById('folderView').classList.add('active');
+      loadStructure();
+    });
+    document.getElementById('toggleMode').addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      document.body.classList.toggle('light');
+    });
+    document.getElementById('diffFacil').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Fácil'); });
+    document.getElementById('diffMedio').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Medio'); });
+    document.getElementById('diffDificil').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Difícil'); });
+    // Soporte de navegación con teclado
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowRight') nextQuestion();
+      else if(e.key === 'ArrowLeft') prevQuestion();
+      else if(e.key === ' ') { flipCard(); e.preventDefault(); }
+    });
+    // Cargar la estructura al iniciar la página
+    window.onload = loadStructure;
+  </script>
+</body>
+</html>
