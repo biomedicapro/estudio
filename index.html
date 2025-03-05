@@ -137,7 +137,7 @@
       <div id="card" class="card flip">
         <!-- Cara 1: Pregunta -->
         <div class="card-face face-front" id="cardFront"></div>
-        <!-- Cara 2: Respuesta (se usa para ambas funciones) -->
+        <!-- Cara 2: Respuesta y explicación -->
         <div class="card-face face-back" id="cardBack"></div>
       </div>
     </div>
@@ -159,7 +159,7 @@
     let folderData = null;     // Estructura de carpetas: Categorías > Asignaturas > Temas
     let questions = [];        // Lista de preguntas para el tema seleccionado
     let currentIndex = 0;      // Índice de la pregunta actual
-    let currentFace = 0;       // 0: Pregunta, 1: Respuesta, 2: (opcional) Podríamos ampliar a explicación si se desea
+    let currentFace = 0;       // 0: Cara de pregunta, 1: Cara de respuesta
     let studyMode = "light";   // Modo claro u oscuro
 
     /* ===============================
@@ -200,11 +200,6 @@
     function renderSubjects(category) {
       const subjList = document.getElementById("subjList");
       subjList.innerHTML = "";
-      Object.keys(category).forEach(key => {
-        if(key !== "name") { } // no-op
-      });
-      // Cada elemento de folderData es {name: "Categoría", subjects: [...]}
-      // Buscar la categoría seleccionada
       const selected = folderData.find(c => c.name === category.name);
       selected.subjects.forEach(subj => {
         const li = document.createElement("li");
@@ -228,7 +223,6 @@
         li.textContent = topic;
         li.onclick = () => {
           sessionStorage.setItem("selectedTopic", topic);
-          // Cargar el mazo de preguntas para la combinación seleccionada
           loadQuestions(sessionStorage.getItem("selectedCategory"), sessionStorage.getItem("selectedSubject"), topic);
         };
         topicList.appendChild(li);
@@ -252,7 +246,7 @@
       .then(data => {
         if(data.status === "success") {
           questions = data.questions;
-          // Buscar la primera pregunta sin dificultad (para retomar estudio)
+          // Buscar la primera pregunta sin dificultad
           const idx = questions.findIndex(q => !q.difficulty || q.difficulty === "");
           currentIndex = (idx >= 0) ? idx : 0;
           currentFace = 0;
@@ -265,11 +259,12 @@
       })
       .catch(err => console.error(err));
     }
-    // Mostrar la interfaz de estudio y solicitar pantalla completa
+    // Mostrar la interfaz de estudio: ocultar vistas de selección y mostrar studyInterface
     function showStudyInterface() {
-      showView(""); // Ocultar las vistas de selección
+      document.getElementById("selectView").style.display = "none";
+      document.getElementById("subjectView").style.display = "none";
+      document.getElementById("topicView").style.display = "none";
       document.getElementById("studyInterface").style.display = "block";
-      // Intentar activar pantalla completa (F11 manualmente en la mayoría de navegadores)
     }
 
     /* ===============================
@@ -297,11 +292,9 @@
       const q = questions[currentIndex];
       const cardFront = document.getElementById("cardFront");
       const cardBack = document.getElementById("cardBack");
-      // Si la pregunta es tipo test, se deben mostrar las opciones en orden aleatorio en la cara de pregunta
+      // Pregunta tipo test: opciones aleatorias
       if(q.type.toLowerCase() === "test") {
-        // Suponemos que en q.answer se encuentran las opciones separadas por "/" y la respuesta correcta es la primera
         let options = q.answer.split("/").map(o => o.trim());
-        // Mezclar las opciones
         options.sort(() => Math.random() - 0.5);
         cardFront.innerHTML = `<div><strong>${q.question}</strong></div><br>`;
         options.forEach(opt => {
@@ -321,12 +314,11 @@
           cardFront.appendChild(btn);
         });
       } else {
-        // Para flashcard, solo se muestra la pregunta
+        // Flashcard: solo la pregunta
         cardFront.innerHTML = `<div><strong>${q.question}</strong></div>`;
       }
-      // Cara de respuesta: mostrar la respuesta correcta y la explicación
+      // Cara de respuesta: mostrar respuesta y explicación
       cardBack.innerHTML = `<div><strong>Respuesta:</strong> ${q.answer}</div><br><div><strong>Explicación:</strong> ${q.explanation}</div>`;
-      // Reiniciar la tarjeta sin flip (mostrar cara frontal)
       const card = document.getElementById("card");
       card.classList.remove("flipped");
       currentFace = 0;
@@ -336,7 +328,6 @@
        Navegación entre preguntas y caras
     ================================ */
     function nextQuestion() {
-      // Si la pregunta actual no tiene dificultad asignada, actualizarla automáticamente como "Fácil"
       if(!questions[currentIndex].difficulty || questions[currentIndex].difficulty === "") {
         updateDifficulty(questions[currentIndex], "Fácil");
       }
@@ -354,18 +345,15 @@
         renderCard();
       }
     }
-    // Alternar (flip) la tarjeta para ver la respuesta
     function flipCard() {
       const card = document.getElementById("card");
       card.classList.toggle("flipped");
       currentFace = (currentFace === 0) ? 1 : 0;
     }
-    // Actualizar la dificultad de la pregunta actual vía Apps Script
+    // Actualizar dificultad vía Apps Script
     function updateDifficulty(question, difficulty) {
-      // Actualizamos localmente
       question.difficulty = difficulty;
       renderProgressPanel();
-      // Enviar POST al backend para actualizar el Sheet
       fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
@@ -387,12 +375,13 @@
     document.getElementById("nextQuestion").addEventListener("click", nextQuestion);
     document.getElementById("prevQuestion").addEventListener("click", prevQuestion);
     document.getElementById("flipCard").addEventListener("click", flipCard);
-    // Botón de regresar: vuelve a la selección de tema y oculta la interfaz de estudio
     document.getElementById("btnBack").addEventListener("click", () => {
       document.getElementById("studyInterface").style.display = "none";
       showView("topicView");
+      document.getElementById("selectView").style.display = "block";
+      document.getElementById("subjectView").style.display = "block";
+      document.getElementById("topicView").style.display = "block";
     });
-    // Botón para alternar modo claro/oscuro
     document.getElementById("btnToggleMode").addEventListener("click", () => {
       const studyInt = document.getElementById("studyInterface");
       if(studyInt.classList.contains("dark")) {
@@ -405,16 +394,13 @@
         document.getElementById("btnToggleMode").innerHTML = "&#9790;";
       }
     });
-    // Botones de dificultad
     document.querySelectorAll(".diff-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const diff = btn.getAttribute("data-diff");
         updateDifficulty(questions[currentIndex], diff);
-        // Avanzar a la siguiente pregunta tras marcar
         nextQuestion();
       });
     });
-    // Atajos de teclado para navegación (flechas izquierda/derecha para cambiar pregunta; espacio para flip)
     document.addEventListener("keydown", (e) => {
       if(document.getElementById("studyInterface").style.display === "block") {
         if(e.key === "ArrowRight") nextQuestion();
@@ -422,7 +408,6 @@
         if(e.key === " ") { e.preventDefault(); flipCard(); }
       }
     });
-    // Función para salir de la interfaz de estudio y volver a la selección
     function exitStudy() {
       document.getElementById("studyInterface").style.display = "none";
       showView("topicView");
