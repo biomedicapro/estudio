@@ -420,46 +420,60 @@
         progressBar.appendChild(div);
       });
     }
-    /* MOSTRAR LA PREGUNTA Y SUS CARAS */
-    function displayQuestion() {
-      if(deck.length === 0) return;
-      const q = deck[currentQuestionIndex];
-      const faceContent = document.getElementById("faceContent");
-      const optionsContainer = document.getElementById("optionsContainer");
-      faceContent.innerHTML = "";
-      optionsContainer.innerHTML = "";
-      if(currentFace === 0) {
-        // Cara 0: Pregunta
-        faceContent.textContent = q.Pregunta;
-        if(q["Test o Flashcard"].toLowerCase() === "test") {
-          let opts = q.Respuesta.split("/");
-          opts = opts.map(o => o.trim());
-          opts = shuffleArray(opts);
-          const optionsDiv = document.createElement("div");
-          optionsDiv.className = "options";
-          opts.forEach(opt => {
-            const div = document.createElement("div");
-            div.className = "option";
-            div.textContent = opt;
-            div.onclick = () => {
-              const correct = (opt === q.Respuesta.split("/")[0].trim());
-              if(correct) div.classList.add("correct");
-              else div.classList.add("incorrect");
-              Array.from(optionsDiv.children).forEach(child => child.onclick = null);
-            };
-            optionsDiv.appendChild(div);
-          });
-          optionsContainer.appendChild(optionsDiv);
-        }
-      } else if(currentFace === 1) {
-        // Cara 1: Respuesta
-        faceContent.textContent = "Respuesta: " + q.Respuesta.split("/")[0].trim();
-      } else if(currentFace === 2) {
-        // Cara 2: Explicación
-        faceContent.textContent = "Explicación: " + q.Explicación;
-      }
-      renderProgressBar();
+/* MOSTRAR LA PREGUNTA Y SUS CARAS */
+function displayQuestion() {
+  if (deck.length === 0) return;
+  const q = deck[currentQuestionIndex];
+  const faceContent = document.getElementById("faceContent");
+  const optionsContainer = document.getElementById("optionsContainer");
+  faceContent.innerHTML = "";
+  optionsContainer.innerHTML = "";
+  
+  if (currentFace === 0) {
+    // Cara 0: Pregunta
+    faceContent.textContent = q.Pregunta;
+    if (q["Test o Flashcard"].toLowerCase() === "test") {
+      let opts = q.Respuesta.split("/");
+      opts = opts.map(o => o.trim());
+      opts = shuffleArray(opts);
+      const optionsDiv = document.createElement("div");
+      optionsDiv.className = "options";
+      opts.forEach(opt => {
+        const optionDiv = document.createElement("div");
+        optionDiv.className = "option";
+        optionDiv.textContent = opt;
+        optionDiv.onclick = () => {
+          // Evita selecciones múltiples
+          Array.from(optionsDiv.children).forEach(child => child.onclick = null);
+          const correctAnswer = q.Respuesta.split("/")[0].trim();
+          if (opt === correctAnswer) {
+            optionDiv.classList.add("correct");
+            showNotification("¡Correcto!");
+          } else {
+            optionDiv.classList.add("incorrect");
+            // Resalta la respuesta correcta en caso de error
+            Array.from(optionsDiv.children).forEach(child => {
+              if (child.textContent === correctAnswer) {
+                child.classList.add("correct");
+              }
+            });
+            showNotification("Incorrecto");
+          }
+        };
+        optionsDiv.appendChild(optionDiv);
+      });
+      optionsContainer.appendChild(optionsDiv);
     }
+  } else if (currentFace === 1) {
+    // Cara 1: Respuesta
+    faceContent.textContent = "Respuesta: " + q.Respuesta.split("/")[0].trim();
+  } else if (currentFace === 2) {
+    // Cara 2: Explicación
+    faceContent.textContent = "Explicación: " + q.Explicación;
+  }
+  renderProgressBar();
+}
+
     /* UTILIDADES */
     function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
