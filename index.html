@@ -5,389 +5,435 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Módulo de Estudio Interactivo</title>
   <style>
-    /* RESET Y BASE */
+    /* Reset y base */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; font-family: Arial, sans-serif; }
-    body.light { background-color: #fff; color: #000; }
-    body.dark { background-color: #000; color: #fff; }
-    /* CONTENEDOR GENERAL */
-    .container {
-      width: 100vw; height: 100vh;
-      display: flex; flex-direction: column;
-      overflow: hidden;
+    html, body { width: 100%; height: 100%; }
+    body { font-family: "Segoe UI", sans-serif; background-color: #fefefe; color: #111; overflow: hidden; }
+    
+    /* Transiciones y animaciones */
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    /* VISTAS COMUNES */
-    .view { display: none; width: 100%; height: 100%; }
+    .flip { transition: transform 0.6s; transform-style: preserve-3d; }
+    .flipped { transform: rotateY(180deg); }
+
+    /* Vistas de selección (carpetas) */
+    .view { display: none; width: 100%; height: 100%; padding: 20px; overflow-y: auto; }
     .view.active { display: block; }
-    /* VISTA DE SELECCIÓN DE MAZO */
-    .folder-view { padding: 20px; overflow-y: auto; }
     .folder-list { list-style: none; margin: 10px 0; }
     .folder-item {
-      padding: 15px; margin-bottom: 10px;
-      border: 1px solid #ccc; border-radius: 5px;
-      cursor: pointer; background: #f0f0f0;
-      transition: background 0.3s;
+      padding: 15px; margin: 8px 0; border: 1px solid #aaa;
+      border-radius: 6px; background-color: #eaeaea; cursor: pointer;
+      transition: background-color 0.2s, box-shadow 0.2s;
     }
-    .folder-item:hover { background: #e0e0e0; }
-    /* INTERFAZ DE ESTUDIO */
-    .study-interface { display: flex; flex-direction: column; height: 100%; }
-    /* PANEL SUPERIOR – BARRA DE PROGRESO */
-    .top-panel {
-      flex: 0 0 50px; display: flex; align-items: center;
-      padding: 0 10px; background: #ddd; overflow-x: auto;
+    .folder-item:hover { background-color: #ddd; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
+    .back-btn { margin-bottom: 15px; padding: 10px 15px; background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    
+    /* Estilos para la interfaz de estudio en pantalla completa */
+    #studyInterface { display: none; width: 100%; height: 100%; position: relative; background-color: #fff; }
+    #studyInterface.dark { background-color: #222; color: #eee; }
+    
+    /* Panel superior – Barra de progreso */
+    #progressPanel {
+      position: absolute; top: 0; left: 0; right: 0; height: 60px;
+      background-color: rgba(0,0,0,0.05); display: flex; align-items: center; padding: 0 10px;
+      overflow-x: auto;
     }
     .progress-item {
-      width: 30px; height: 30px; margin: 0 5px;
-      border-radius: 50%; background: #bbb;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.9em; cursor: pointer;
+      width: 40px; height: 40px; line-height: 40px; text-align: center;
+      margin: 0 5px; border-radius: 50%; background-color: #bbb;
+      flex-shrink: 0; font-weight: bold;
     }
-    /* INDICADORES DE DIFICULTAD */
-    .diff-facil { background: green; color: white; }
-    .diff-medio { background: yellow; color: black; }
-    .diff-dificil { background: red; color: white; }
-    /* ÁREA CENTRAL – TARJETA */
-    .card-container {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      position: relative; perspective: 1000px; overflow: hidden;
+    /* Colores según dificultad */
+    .diff-facil { background-color: #4caf50; }
+    .diff-medio { background-color: #ffeb3b; color: #333; }
+    .diff-dificil { background-color: #f44336; }
+    
+    /* Panel derecho – Controles interactivos */
+    #controlPanel {
+      position: absolute; top: 60px; right: 0; bottom: 0; width: 70px;
+      background-color: rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center;
+      padding: 10px; gap: 15px;
+    }
+    #controlPanel button {
+      width: 50px; height: 50px; border: none; border-radius: 50%;
+      background-color: #333; color: #fff; font-size: 18px; cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    #controlPanel button:hover { background-color: #555; }
+    
+    /* Área central – Tarjeta de estudio */
+    #cardContainer {
+      position: absolute; top: 60px; left: 0; right: 70px; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      perspective: 1000px;
     }
     .card {
-      width: 90%; max-width: 600px; min-height: 300px;
-      background: #fff; border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: transform 0.6s; transform-style: preserve-3d;
-      position: relative;
+      width: 90%; max-width: 600px; min-height: 300px; background-color: #fff;
+      border-radius: 10px; padding: 20px; position: relative;
+      text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transform-style: preserve-3d;
     }
-    .card.flipped { transform: rotateY(180deg); }
+    #studyInterface.dark .card { background-color: #333; color: #eee; }
     .card-face {
-      position: absolute; width: 100%; height: 100%;
-      backface-visibility: hidden;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 20px; text-align: center;
+      position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      font-size: calc(16px + 0.5vw); word-wrap: break-word;
     }
-    .card-face.back { transform: rotateY(180deg); }
-    .card-face.explanation { transform: rotateY(360deg); }
-    /* Opciones para preguntas tipo TEST */
-    .option-list { list-style: none; margin-top: 20px; padding: 0; width: 100%; }
-    .option-item {
-      padding: 10px; margin: 5px 0;
-      border: 1px solid #ccc; border-radius: 5px;
-      cursor: pointer; background: #f9f9f9;
-      transition: background 0.3s;
+    .face-back { transform: rotateY(180deg); }
+    
+    /* Flechas de navegación para cambiar de pregunta o flip */
+    .nav-arrow {
+      position: absolute; bottom: 20px; width: 50px; height: 50px;
+      background-color: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%;
+      font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background-color 0.2s;
     }
-    .option-item.correct { background: #a0e7a0; }
-    .option-item.incorrect { background: #e7a0a0; }
-    /* PANEL DERECHO – CONTROLES */
-    .right-panel {
-      position: absolute; top: 50px; right: 0;
-      width: 60px; height: calc(100% - 50px);
-      background: rgba(200,200,200,0.8);
-      display: flex; flex-direction: column; align-items: center;
-      padding: 10px 0;
+    .nav-arrow:hover { background-color: rgba(0,0,0,0.7); }
+    #prevQuestion { left: 20px; }
+    #nextQuestion { right: 20px; }
+    #flipCard { bottom: 90px; left: calc(50% - 25px); }
+    
+    /* Botón para salir de estudio */
+    #exitStudy {
+      position: absolute; top: 10px; left: 10px; padding: 10px 15px;
+      background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;
     }
-    .control-button {
-      margin: 10px 0; padding: 10px;
-      border: none; background: #444; color: #fff;
-      border-radius: 5px; cursor: pointer;
-      transition: background 0.3s;
-    }
-    .control-button:hover { background: #666; }
-    /* FLECHAS DE NAVEGACIÓN */
-    .nav-arrows {
-      position: absolute; bottom: 20px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; gap: 20px;
-    }
-    .arrow-button {
-      padding: 10px 15px; border: none;
-      background: #444; color: #fff; border-radius: 5px;
-      cursor: pointer; transition: background 0.3s;
-    }
-    .arrow-button:hover { background: #666; }
   </style>
 </head>
-<body class="light">
-  <div class="container">
-    <!-- Vista de Selección de Mazo -->
-    <div id="folderView" class="view folder-view active">
-      <h1>Selecciona Mazo de Preguntas</h1>
-      <div id="folderSelection">
-        <!-- Se cargará la estructura de carpetas dinámicamente -->
-      </div>
-    </div>
-    <!-- Vista de Estudio -->
-    <div id="studyView" class="view study-interface">
-      <!-- Panel Superior: Barra de Progreso -->
-      <div class="top-panel" id="progressBar">
-        <!-- Elementos de progreso se agregarán dinámicamente -->
-      </div>
-      <!-- Área Central: Tarjeta -->
-      <div class="card-container">
-        <div id="card" class="card">
-          <!-- Cara 1: Pregunta -->
-          <div class="card-face front" id="cardQuestion"></div>
-          <!-- Cara 2: Respuesta -->
-          <div class="card-face back" id="cardAnswer"></div>
-          <!-- Cara 3: Explicación -->
-          <div class="card-face explanation" id="cardExplanation"></div>
-        </div>
-      </div>
-      <!-- Panel Derecho: Controles -->
-      <div class="right-panel">
-        <button class="control-button" id="backButton">Regresar</button>
-        <button class="control-button" id="toggleMode">Modo Claro/Oscuro</button>
-        <button class="control-button" id="diffFacil">Fácil</button>
-        <button class="control-button" id="diffMedio">Medio</button>
-        <button class="control-button" id="diffDificil">Difícil</button>
-      </div>
-      <!-- Flechas de Navegación -->
-      <div class="nav-arrows">
-        <button class="arrow-button" id="prevBtn">&larr; Anterior</button>
-        <button class="arrow-button" id="flipBtn">Flip</button>
-        <button class="arrow-button" id="nextBtn">Siguiente &rarr;</button>
-      </div>
-    </div>
+<body>
+  <!-- Vistas de selección de mazo -->
+  <div id="selectView" class="view active fade-in">
+    <h2>Seleccione una Categoría</h2>
+    <ul id="catList" class="folder-list"></ul>
   </div>
+  <div id="subjectView" class="view fade-in">
+    <button class="back-btn" onclick="goBack('selectView')">&larr; Categorías</button>
+    <h2>Seleccione una Asignatura</h2>
+    <ul id="subjList" class="folder-list"></ul>
+  </div>
+  <div id="topicView" class="view fade-in">
+    <button class="back-btn" onclick="goBack('subjectView')">&larr; Asignaturas</button>
+    <h2>Seleccione un Tema</h2>
+    <ul id="topicList" class="folder-list"></ul>
+  </div>
+
+  <!-- Interfaz de estudio (pantalla completa) -->
+  <div id="studyInterface">
+    <!-- Panel superior – Barra de progreso -->
+    <div id="progressPanel"></div>
+    <!-- Panel derecho – Controles interactivos -->
+    <div id="controlPanel">
+      <button id="btnBack" title="Regresar">&#x21a9;</button>
+      <button id="btnToggleMode" title="Modo Claro/Oscuro">&#9788;</button>
+      <button class="diff-btn" data-diff="Fácil" title="Fácil">1</button>
+      <button class="diff-btn" data-diff="Medio" title="Medio">2</button>
+      <button class="diff-btn" data-diff="Difícil" title="Difícil">3</button>
+    </div>
+    <!-- Área central – Tarjeta -->
+    <div id="cardContainer">
+      <div id="card" class="card flip">
+        <!-- Cara 1: Pregunta -->
+        <div class="card-face face-front" id="cardFront"></div>
+        <!-- Cara 2: Respuesta (se usa para ambas funciones) -->
+        <div class="card-face face-back" id="cardBack"></div>
+      </div>
+    </div>
+    <!-- Flechas de navegación -->
+    <button id="prevQuestion" class="nav-arrow" title="Pregunta anterior">&#9664;</button>
+    <button id="flipCard" class="nav-arrow" title="Ver respuesta">&#8635;</button>
+    <button id="nextQuestion" class="nav-arrow" title="Siguiente pregunta">&#9654;</button>
+    <!-- Botón de salida -->
+    <button id="exitStudy" onclick="exitStudy()">Salir</button>
+  </div>
+
   <script>
-    // URL del Apps Script – REEMPLAZAR "YOUR_SCRIPT_ID" con el ID de despliegue correspondiente
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxwd6VlPcXJd1Pr2L21ujJElTew3Nm6T0h24r2HN99k0r0PSnuVaYjInQ9L6MbRs-GQ/exec';
-    
-    // Variables globales para estructura y mazo
-    let structure = {};  // { categories: [ { name, subjects: [ { name, topics: [ { name } ] } ] } ] }
-    let deck = [];       // Array de objetos pregunta para el tema seleccionado
-    let currentQuestionIndex = 0;
-    let currentFace = 0; // 0: Pregunta, 1: Respuesta, 2: Explicación
-    let currentSelection = { category: null, subject: null, topic: null };
+    /* ===============================
+       Variables globales y estado
+    ================================ */
+    // URL de despliegue del Apps Script (reemplazar YOUR_SCRIPT_ID)
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyelDks7HNa6ov41RZ30ATatXyymU0pNpdh2MDHXC7Pk-ahuRIdRLj-1EVXvDLIHzMb/exec';
 
-    // --- CARGA DE ESTRUCTURA Y SELECCIÓN DE MAZO ---
-    function loadStructure() {
-      fetch(scriptURL + '?action=getStructure')
-        .then(res => res.json())
-        .then(data => {
-          if(data.status === 'success') {
-            structure = data.data;  // { categories: [...] }
-            renderFolderSelection();
-          } else {
-            alert('Error al cargar la estructura: ' + data.message);
-          }
-        })
-        .catch(err => console.error(err));
-    }
-    function renderFolderSelection() {
-      const container = document.getElementById('folderSelection');
-      container.innerHTML = '';
-      // Se muestran las Categorías
-      const catDiv = document.createElement('div');
-      catDiv.innerHTML = '<h2>Categorías</h2>';
-      const catList = document.createElement('ul');
-      catList.className = 'folder-list';
-      structure.categories.forEach((cat, idx) => {
-        const li = document.createElement('li');
-        li.className = 'folder-item';
-        li.textContent = cat.name;
-        li.onclick = () => selectCategory(idx);
-        catList.appendChild(li);
-      });
-      catDiv.appendChild(catList);
-      container.appendChild(catDiv);
-    }
-    function selectCategory(index) {
-      currentSelection.category = structure.categories[index];
-      const container = document.getElementById('folderSelection');
-      container.innerHTML = '';
-      const subDiv = document.createElement('div');
-      subDiv.innerHTML = `<h2>Asignaturas en ${currentSelection.category.name}</h2>`;
-      const subList = document.createElement('ul');
-      subList.className = 'folder-list';
-      currentSelection.category.subjects.forEach((sub, idx) => {
-        const li = document.createElement('li');
-        li.className = 'folder-item';
-        li.textContent = sub.name;
-        li.onclick = () => selectSubject(idx);
-        subList.appendChild(li);
-      });
-      subDiv.appendChild(subList);
-      const backBtn = document.createElement('button');
-      backBtn.textContent = 'Regresar';
-      backBtn.onclick = () => renderFolderSelection();
-      subDiv.appendChild(backBtn);
-      container.appendChild(subDiv);
-    }
-    function selectSubject(index) {
-      currentSelection.subject = currentSelection.category.subjects[index];
-      const container = document.getElementById('folderSelection');
-      container.innerHTML = '';
-      const topicDiv = document.createElement('div');
-      topicDiv.innerHTML = `<h2>Temas en ${currentSelection.subject.name}</h2>`;
-      const topicList = document.createElement('ul');
-      topicList.className = 'folder-list';
-      currentSelection.subject.topics.forEach((top, idx) => {
-        const li = document.createElement('li');
-        li.className = 'folder-item';
-        li.textContent = top.name;
-        li.onclick = () => selectTopic(idx);
-        topicList.appendChild(li);
-      });
-      topicDiv.appendChild(topicList);
-      const backBtn = document.createElement('button');
-      backBtn.textContent = 'Regresar';
-      backBtn.onclick = () => selectCategory(structure.categories.indexOf(currentSelection.category));
-      topicDiv.appendChild(backBtn);
-      container.appendChild(topicDiv);
-    }
-    function selectTopic(index) {
-      currentSelection.topic = currentSelection.subject.topics[index];
-      // Una vez seleccionado el tema, se carga el mazo de preguntas
-      loadDeck(currentSelection.category.name, currentSelection.subject.name, currentSelection.topic.name);
-    }
-    function loadDeck(category, subject, topic) {
-      fetch(`${scriptURL}?action=getDeck&category=${encodeURIComponent(category)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`)
-        .then(res => res.json())
-        .then(data => {
-          if(data.status === 'success') {
-            deck = data.data.questions;
-            // Buscar la primera pregunta sin clasificar dificultad
-            const firstUnclassified = deck.findIndex(q => !q.dificultad || q.dificultad.trim() === '');
-            currentQuestionIndex = firstUnclassified !== -1 ? firstUnclassified : 0;
-            currentFace = 0;
-            // Cambiar a vista de estudio
-            document.getElementById('folderView').classList.remove('active');
-            document.getElementById('studyView').classList.add('active');
-            renderProgressBar();
-            renderCard();
-          } else {
-            alert('Error al cargar el mazo: ' + data.message);
-          }
-        })
-        .catch(err => console.error(err));
-    }
+    let folderData = null;     // Estructura de carpetas: Categorías > Asignaturas > Temas
+    let questions = [];        // Lista de preguntas para el tema seleccionado
+    let currentIndex = 0;      // Índice de la pregunta actual
+    let currentFace = 0;       // 0: Pregunta, 1: Respuesta, 2: (opcional) Podríamos ampliar a explicación si se desea
+    let studyMode = "light";   // Modo claro u oscuro
 
-    // --- INTERFAZ DE ESTUDIO ---
-    // Panel Superior: Barra de Progreso
-    function renderProgressBar() {
-      const progressBar = document.getElementById('progressBar');
-      progressBar.innerHTML = '';
-      deck.forEach((q, idx) => {
-        const item = document.createElement('div');
-        item.className = 'progress-item';
-        item.textContent = idx + 1;
-        if(q.dificultad) {
-          if(q.dificultad.toLowerCase() === 'fácil') item.classList.add('diff-facil');
-          else if(q.dificultad.toLowerCase() === 'medio') item.classList.add('diff-medio');
-          else if(q.dificultad.toLowerCase() === 'difícil') item.classList.add('diff-dificil');
+    /* ===============================
+       Funciones de carga y navegación
+    ================================ */
+    // Cargar la estructura de carpetas desde el Sheet (GET action=getFolders)
+    function loadFolders() {
+      fetch(SCRIPT_URL + '?action=getFolders')
+      .then(response => response.json())
+      .then(data => {
+        if(data.status === "success") {
+          folderData = data.folders;
+          renderCategories();
+        } else {
+          alert("Error cargando carpetas: " + data.message);
         }
-        item.onclick = () => { currentQuestionIndex = idx; currentFace = 0; renderCard(); };
-        progressBar.appendChild(item);
-      });
-    }
-    // Renderizar tarjeta actual
-    function renderCard() {
-      if(deck.length === 0) return;
-      const questionObj = deck[currentQuestionIndex];
-      const cardQuestion = document.getElementById('cardQuestion');
-      const cardAnswer = document.getElementById('cardAnswer');
-      const cardExplanation = document.getElementById('cardExplanation');
-      cardQuestion.innerHTML = '';
-      cardAnswer.innerHTML = '';
-      cardExplanation.innerHTML = '';
-
-      // Cara 1: Pregunta
-      if(questionObj['Test o Flashcard'].toLowerCase() === 'test') {
-        const qText = document.createElement('div');
-        qText.textContent = questionObj.Pregunta;
-        cardQuestion.appendChild(qText);
-        const options = questionObj.Respuesta.split('/');
-        const correctAnswer = options[0].trim();
-        const shuffled = options.sort(() => Math.random() - 0.5);
-        const optionList = document.createElement('ul');
-        optionList.className = 'option-list';
-        shuffled.forEach(opt => {
-          const li = document.createElement('li');
-          li.className = 'option-item';
-          li.textContent = opt.trim();
-          li.onclick = () => {
-            if(opt.trim() === correctAnswer) { li.classList.add('correct'); }
-            else { li.classList.add('incorrect'); }
-          };
-          optionList.appendChild(li);
-        });
-        cardQuestion.appendChild(optionList);
-      } else {
-        cardQuestion.textContent = questionObj.Pregunta;
-      }
-      // Cara 2: Respuesta
-      cardAnswer.textContent = questionObj.Respuesta;
-      // Cara 3: Explicación
-      cardExplanation.textContent = questionObj.Explicación;
-
-      // Ajustar la visualización de la tarjeta según currentFace
-      const card = document.getElementById('card');
-      card.classList.remove('flipped');
-      if(currentFace === 1) { card.classList.add('flipped'); }
-      else if(currentFace === 2) {
-        // Para mostrar explicación, se puede implementar efecto adicional si se desea
-        card.classList.add('flipped');
-      }
-    }
-    // Navegación: siguiente, anterior y flip de tarjeta
-    function nextQuestion() {
-      if(!deck[currentQuestionIndex].dificultad || deck[currentQuestionIndex].dificultad.trim() === '') {
-        updateDifficulty(deck[currentQuestionIndex], 'Fácil');
-      }
-      if(currentQuestionIndex < deck.length - 1) { currentQuestionIndex++; currentFace = 0; renderProgressBar(); renderCard(); }
-    }
-    function prevQuestion() {
-      if(currentQuestionIndex > 0) { currentQuestionIndex--; currentFace = 0; renderCard(); }
-    }
-    function flipCard() {
-      currentFace = (currentFace + 1) % 3;
-      renderCard();
-    }
-    // Actualizar dificultad a través de Apps Script
-    function updateDifficulty(questionObj, difficulty) {
-      questionObj.dificultad = difficulty;
-      const payload = {
-        action: 'updateDifficulty',
-        category: questionObj.Categoría,
-        subject: questionObj.Asignatura,
-        topic: questionObj.Tema,
-        id: questionObj['id#'],
-        difficulty: difficulty
-      };
-      fetch(scriptURL, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
       })
-      .then(res => res.json())
-      .then(data => { if(data.status === 'success') { renderProgressBar(); } else { console.error('Error al actualizar dificultad:', data.message); } })
       .catch(err => console.error(err));
     }
-    // --- EVENTOS DE CONTROLES ---
-    document.getElementById('nextBtn').addEventListener('click', nextQuestion);
-    document.getElementById('prevBtn').addEventListener('click', prevQuestion);
-    document.getElementById('flipBtn').addEventListener('click', flipCard);
-    document.getElementById('backButton').addEventListener('click', () => {
-      document.getElementById('studyView').classList.remove('active');
-      document.getElementById('folderView').classList.add('active');
-      loadStructure();
+
+    // Renderizar Categorías en selectView
+    function renderCategories() {
+      const catList = document.getElementById("catList");
+      catList.innerHTML = "";
+      folderData.forEach(cat => {
+        const li = document.createElement("li");
+        li.className = "folder-item";
+        li.textContent = cat.name;
+        li.onclick = () => {
+          sessionStorage.setItem("selectedCategory", cat.name);
+          renderSubjects(cat);
+          showView("subjectView");
+        };
+        catList.appendChild(li);
+      });
+    }
+    // Renderizar Asignaturas
+    function renderSubjects(category) {
+      const subjList = document.getElementById("subjList");
+      subjList.innerHTML = "";
+      Object.keys(category).forEach(key => {
+        if(key !== "name") { } // no-op
+      });
+      // Cada elemento de folderData es {name: "Categoría", subjects: [...]}
+      // Buscar la categoría seleccionada
+      const selected = folderData.find(c => c.name === category.name);
+      selected.subjects.forEach(subj => {
+        const li = document.createElement("li");
+        li.className = "folder-item";
+        li.textContent = subj.name;
+        li.onclick = () => {
+          sessionStorage.setItem("selectedSubject", subj.name);
+          renderTopics(selected, subj);
+          showView("topicView");
+        };
+        subjList.appendChild(li);
+      });
+    }
+    // Renderizar Temas
+    function renderTopics(category, subject) {
+      const topicList = document.getElementById("topicList");
+      topicList.innerHTML = "";
+      subject.topics.forEach(topic => {
+        const li = document.createElement("li");
+        li.className = "folder-item";
+        li.textContent = topic;
+        li.onclick = () => {
+          sessionStorage.setItem("selectedTopic", topic);
+          // Cargar el mazo de preguntas para la combinación seleccionada
+          loadQuestions(sessionStorage.getItem("selectedCategory"), sessionStorage.getItem("selectedSubject"), topic);
+        };
+        topicList.appendChild(li);
+      });
+    }
+    // Función para mostrar una vista específica
+    function showView(viewId) {
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      document.getElementById(viewId).classList.add("active");
+    }
+    // Volver a la vista anterior
+    function goBack(viewId) { showView(viewId); }
+
+    /* ===============================
+       Funciones para cargar y procesar preguntas
+    ================================ */
+    // Cargar preguntas para la combinación: categoría, asignatura, tema
+    function loadQuestions(category, subject, topic) {
+      fetch(`${SCRIPT_URL}?action=getQuestions&category=${encodeURIComponent(category)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`)
+      .then(response => response.json())
+      .then(data => {
+        if(data.status === "success") {
+          questions = data.questions;
+          // Buscar la primera pregunta sin dificultad (para retomar estudio)
+          const idx = questions.findIndex(q => !q.difficulty || q.difficulty === "");
+          currentIndex = (idx >= 0) ? idx : 0;
+          currentFace = 0;
+          renderProgressPanel();
+          renderCard();
+          showStudyInterface();
+        } else {
+          alert("Error cargando preguntas: " + data.message);
+        }
+      })
+      .catch(err => console.error(err));
+    }
+    // Mostrar la interfaz de estudio y solicitar pantalla completa
+    function showStudyInterface() {
+      showView(""); // Ocultar las vistas de selección
+      document.getElementById("studyInterface").style.display = "block";
+      // Intentar activar pantalla completa (F11 manualmente en la mayoría de navegadores)
+    }
+
+    /* ===============================
+       Renderización de la interfaz de estudio
+    ================================ */
+    // Renderizar el panel superior (progreso)
+    function renderProgressPanel() {
+      const panel = document.getElementById("progressPanel");
+      panel.innerHTML = "";
+      questions.forEach((q, index) => {
+        const div = document.createElement("div");
+        div.className = "progress-item";
+        div.textContent = q.id;
+        if(q.difficulty) {
+          if(q.difficulty === "Fácil") div.classList.add("diff-facil");
+          else if(q.difficulty === "Medio") div.classList.add("diff-medio");
+          else if(q.difficulty === "Difícil") div.classList.add("diff-dificil");
+        }
+        panel.appendChild(div);
+      });
+    }
+    // Renderizar la tarjeta (pregunta/respuesta)
+    function renderCard() {
+      if(questions.length === 0) return;
+      const q = questions[currentIndex];
+      const cardFront = document.getElementById("cardFront");
+      const cardBack = document.getElementById("cardBack");
+      // Si la pregunta es tipo test, se deben mostrar las opciones en orden aleatorio en la cara de pregunta
+      if(q.type.toLowerCase() === "test") {
+        // Suponemos que en q.answer se encuentran las opciones separadas por "/" y la respuesta correcta es la primera
+        let options = q.answer.split("/").map(o => o.trim());
+        // Mezclar las opciones
+        options.sort(() => Math.random() - 0.5);
+        cardFront.innerHTML = `<div><strong>${q.question}</strong></div><br>`;
+        options.forEach(opt => {
+          const btn = document.createElement("button");
+          btn.style.margin = "5px";
+          btn.style.padding = "10px";
+          btn.style.borderRadius = "4px";
+          btn.style.border = "1px solid #333";
+          btn.textContent = opt;
+          btn.onclick = () => {
+            if(opt === q.answer.split("/")[0].trim()) {
+              btn.style.backgroundColor = "#4caf50";
+            } else {
+              btn.style.backgroundColor = "#f44336";
+            }
+          };
+          cardFront.appendChild(btn);
+        });
+      } else {
+        // Para flashcard, solo se muestra la pregunta
+        cardFront.innerHTML = `<div><strong>${q.question}</strong></div>`;
+      }
+      // Cara de respuesta: mostrar la respuesta correcta y la explicación
+      cardBack.innerHTML = `<div><strong>Respuesta:</strong> ${q.answer}</div><br><div><strong>Explicación:</strong> ${q.explanation}</div>`;
+      // Reiniciar la tarjeta sin flip (mostrar cara frontal)
+      const card = document.getElementById("card");
+      card.classList.remove("flipped");
+      currentFace = 0;
+    }
+
+    /* ===============================
+       Navegación entre preguntas y caras
+    ================================ */
+    function nextQuestion() {
+      // Si la pregunta actual no tiene dificultad asignada, actualizarla automáticamente como "Fácil"
+      if(!questions[currentIndex].difficulty || questions[currentIndex].difficulty === "") {
+        updateDifficulty(questions[currentIndex], "Fácil");
+      }
+      if(currentIndex < questions.length - 1) {
+        currentIndex++;
+        currentFace = 0;
+        renderCard();
+      }
+      renderProgressPanel();
+    }
+    function prevQuestion() {
+      if(currentIndex > 0) {
+        currentIndex--;
+        currentFace = 0;
+        renderCard();
+      }
+    }
+    // Alternar (flip) la tarjeta para ver la respuesta
+    function flipCard() {
+      const card = document.getElementById("card");
+      card.classList.toggle("flipped");
+      currentFace = (currentFace === 0) ? 1 : 0;
+    }
+    // Actualizar la dificultad de la pregunta actual vía Apps Script
+    function updateDifficulty(question, difficulty) {
+      // Actualizamos localmente
+      question.difficulty = difficulty;
+      renderProgressPanel();
+      // Enviar POST al backend para actualizar el Sheet
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          updateDifficulty: true,
+          category: question.category,
+          subject: question.subject,
+          topic: question.topic,
+          id: question.id,
+          difficulty: difficulty
+        })
+      });
+    }
+
+    /* ===============================
+       Control de botones y eventos
+    ================================ */
+    document.getElementById("nextQuestion").addEventListener("click", nextQuestion);
+    document.getElementById("prevQuestion").addEventListener("click", prevQuestion);
+    document.getElementById("flipCard").addEventListener("click", flipCard);
+    // Botón de regresar: vuelve a la selección de tema y oculta la interfaz de estudio
+    document.getElementById("btnBack").addEventListener("click", () => {
+      document.getElementById("studyInterface").style.display = "none";
+      showView("topicView");
     });
-    document.getElementById('toggleMode').addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      document.body.classList.toggle('light');
+    // Botón para alternar modo claro/oscuro
+    document.getElementById("btnToggleMode").addEventListener("click", () => {
+      const studyInt = document.getElementById("studyInterface");
+      if(studyInt.classList.contains("dark")) {
+        studyInt.classList.remove("dark");
+        studyMode = "light";
+        document.getElementById("btnToggleMode").innerHTML = "&#9788;";
+      } else {
+        studyInt.classList.add("dark");
+        studyMode = "dark";
+        document.getElementById("btnToggleMode").innerHTML = "&#9790;";
+      }
     });
-    document.getElementById('diffFacil').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Fácil'); });
-    document.getElementById('diffMedio').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Medio'); });
-    document.getElementById('diffDificil').addEventListener('click', () => { updateDifficulty(deck[currentQuestionIndex], 'Difícil'); });
-    // Soporte de navegación con teclado
-    document.addEventListener('keydown', (e) => {
-      if(e.key === 'ArrowRight') nextQuestion();
-      else if(e.key === 'ArrowLeft') prevQuestion();
-      else if(e.key === ' ') { flipCard(); e.preventDefault(); }
+    // Botones de dificultad
+    document.querySelectorAll(".diff-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const diff = btn.getAttribute("data-diff");
+        updateDifficulty(questions[currentIndex], diff);
+        // Avanzar a la siguiente pregunta tras marcar
+        nextQuestion();
+      });
     });
-    // Cargar la estructura al iniciar la página
-    window.onload = loadStructure;
+    // Atajos de teclado para navegación (flechas izquierda/derecha para cambiar pregunta; espacio para flip)
+    document.addEventListener("keydown", (e) => {
+      if(document.getElementById("studyInterface").style.display === "block") {
+        if(e.key === "ArrowRight") nextQuestion();
+        if(e.key === "ArrowLeft") prevQuestion();
+        if(e.key === " ") { e.preventDefault(); flipCard(); }
+      }
+    });
+    // Función para salir de la interfaz de estudio y volver a la selección
+    function exitStudy() {
+      document.getElementById("studyInterface").style.display = "none";
+      showView("topicView");
+    }
+
+    /* ===============================
+       Inicialización
+    ================================ */
+    window.onload = () => {
+      loadFolders();
+    };
   </script>
 </body>
 </html>
