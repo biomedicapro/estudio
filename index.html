@@ -3,421 +3,529 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Módulo de Estudio Interactivo</title>
+  <title>Estudio Interactivo</title>
   <style>
-    /* Reset y base */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; }
-    body { font-family: "Segoe UI", sans-serif; background-color: #fefefe; color: #111; overflow: hidden; }
-    
-    /* Transiciones y animaciones */
-    .fade-in { animation: fadeIn 0.3s ease-in-out; }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    /* Reset y configuración base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .flip { transition: transform 0.6s; transform-style: preserve-3d; }
-    .flipped { transform: rotateY(180deg); }
-
-    /* Vistas de selección (carpetas) */
-    .view { display: none; width: 100%; height: 100%; padding: 20px; overflow-y: auto; }
-    .view.active { display: block; }
-    .folder-list { list-style: none; margin: 10px 0; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    body.light {
+      background-color: #ffffff;
+      color: #111;
+    }
+    body.dark {
+      background-color: #111;
+      color: #eee;
+    }
+    /* Contenedor principal de la aplicación */
+    .app-container {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Vistas de selección de carpeta (Categoría, Asignatura, Tema) */
+    .folder-view {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .folder-view h2 {
+      margin-bottom: 15px;
+    }
+    .folder-list {
+      list-style: none;
+      padding: 0;
+    }
     .folder-item {
-      padding: 15px; margin: 8px 0; border: 1px solid #aaa;
-      border-radius: 6px; background-color: #eaeaea; cursor: pointer;
-      transition: background-color 0.2s, box-shadow 0.2s;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f5f5f5;
+      cursor: pointer;
+      transition: background-color 0.3s;
     }
-    .folder-item:hover { background-color: #ddd; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
-    .back-btn { margin-bottom: 15px; padding: 10px 15px; background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-    
-    /* Estilos para la interfaz de estudio en pantalla completa */
-    #studyInterface { display: none; width: 100%; height: 100%; position: relative; background-color: #fff; }
-    #studyInterface.dark { background-color: #222; color: #eee; }
-    
-    /* Panel superior – Barra de progreso */
-    #progressPanel {
-      position: absolute; top: 0; left: 0; right: 0; height: 60px;
-      background-color: rgba(0,0,0,0.05); display: flex; align-items: center; padding: 0 10px;
+    .folder-item:hover {
+      background-color: #ddd;
+    }
+    .back-button {
+      margin-bottom: 15px;
+      padding: 8px 12px;
+      border: none;
+      background-color: #444;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    /* Vista de Estudio – pantalla completa */
+    .study-view {
+      display: none;
+      height: 100%;
+      width: 100%;
+      position: relative;
+      background-color: inherit;
+      color: inherit;
+    }
+    .study-view.active {
+      display: block;
+    }
+    /* Panel Superior: Barra de Progreso */
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 60px; /* dejar espacio para el panel derecho */
+      height: 50px;
+      background-color: rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
       overflow-x: auto;
+      padding: 0 10px;
     }
     .progress-item {
-      width: 40px; height: 40px; line-height: 40px; text-align: center;
-      margin: 0 5px; border-radius: 50%; background-color: #bbb;
-      flex-shrink: 0; font-weight: bold;
+      width: 40px;
+      height: 40px;
+      margin: 0 5px;
+      border-radius: 50%;
+      background-color: gray;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      cursor: pointer;
+      flex-shrink: 0;
     }
-    /* Colores según dificultad */
-    .diff-facil { background-color: #4caf50; }
-    .diff-medio { background-color: #ffeb3b; color: #333; }
-    .diff-dificil { background-color: #f44336; }
-    
-    /* Panel derecho – Controles interactivos */
-    #controlPanel {
-      position: absolute; top: 60px; right: 0; bottom: 0; width: 70px;
-      background-color: rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center;
-      padding: 10px; gap: 15px;
+    .progress-item.fácil { background-color: green; }
+    .progress-item.medio { background-color: yellow; color: #000; }
+    .progress-item.difícil { background-color: red; }
+    /* Panel Derecho: Controles Interactivos */
+    .control-panel {
+      position: absolute;
+      top: 50px;
+      right: 0;
+      width: 60px;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
     }
-    #controlPanel button {
-      width: 50px; height: 50px; border: none; border-radius: 50%;
-      background-color: #333; color: #fff; font-size: 18px; cursor: pointer;
-      transition: background-color 0.2s;
+    .control-panel button {
+      background: none;
+      border: none;
+      margin: 10px 0;
+      cursor: pointer;
+      font-size: 20px;
     }
-    #controlPanel button:hover { background-color: #555; }
-    
-    /* Área central – Tarjeta de estudio */
-    #cardContainer {
-      position: absolute; top: 60px; left: 0; right: 70px; bottom: 0;
-      display: flex; align-items: center; justify-content: center;
-      perspective: 1000px;
+    /* Área Central: Tarjeta */
+    .card-area {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      right: 60px;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
     .card {
-      width: 90%; max-width: 600px; min-height: 300px; background-color: #fff;
-      border-radius: 10px; padding: 20px; position: relative;
-      text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 600px;
+      height: 80%;
+      background-color: rgba(255,255,255,0.9);
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      transition: transform 0.6s;
       transform-style: preserve-3d;
     }
-    #studyInterface.dark .card { background-color: #333; color: #eee; }
     .card-face {
-      position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-      font-size: calc(16px + 0.5vw); word-wrap: break-word;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      overflow-y: auto;
+      font-size: calc(16px + 0.5vw);
     }
-    .face-back { transform: rotateY(180deg); }
-    
-    /* Flechas de navegación para cambiar de pregunta o flip */
-    .nav-arrow {
-      position: absolute; bottom: 20px; width: 50px; height: 50px;
-      background-color: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%;
-      font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: background-color 0.2s;
+    .card-face.back {
+      transform: rotateY(180deg);
     }
-    .nav-arrow:hover { background-color: rgba(0,0,0,0.7); }
-    #prevQuestion { left: 20px; }
-    #nextQuestion { right: 20px; }
-    #flipCard { bottom: 90px; left: calc(50% - 25px); }
-    
-    /* Botón para salir de estudio */
-    #exitStudy {
-      position: absolute; top: 10px; left: 10px; padding: 10px 15px;
-      background-color: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer;
+    .card.flip {
+      transform: rotateY(180deg);
+    }
+    /* Flechas de Navegación (dentro de la tarjeta) */
+    .nav-arrows {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+    }
+    .nav-arrows button {
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: #fff;
+      padding: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    /* Opciones para preguntas tipo test */
+    .options {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    .option {
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #f5f5f5;
+      transition: background-color 0.3s;
+    }
+    .option:hover {
+      background-color: #ddd;
+    }
+    .option.correct {
+      background-color: green;
+      color: #fff;
+    }
+    .option.incorrect {
+      background-color: red;
+      color: #fff;
     }
   </style>
 </head>
-<body>
-  <!-- Vistas de selección de mazo -->
-  <div id="selectView" class="view active fade-in">
-    <h2>Seleccione una Categoría</h2>
-    <ul id="catList" class="folder-list"></ul>
-  </div>
-  <div id="subjectView" class="view fade-in">
-    <button class="back-btn" onclick="goBack('selectView')">&larr; Categorías</button>
-    <h2>Seleccione una Asignatura</h2>
-    <ul id="subjList" class="folder-list"></ul>
-  </div>
-  <div id="topicView" class="view fade-in">
-    <button class="back-btn" onclick="goBack('subjectView')">&larr; Asignaturas</button>
-    <h2>Seleccione un Tema</h2>
-    <ul id="topicList" class="folder-list"></ul>
-  </div>
-
-  <!-- Interfaz de estudio (pantalla completa) -->
-  <div id="studyInterface">
-    <!-- Panel superior – Barra de progreso -->
-    <div id="progressPanel"></div>
-    <!-- Panel derecho – Controles interactivos -->
-    <div id="controlPanel">
-      <button id="btnBack" title="Regresar">&#x21a9;</button>
-      <button id="btnToggleMode" title="Modo Claro/Oscuro">&#9788;</button>
-      <button class="diff-btn" data-diff="Fácil" title="Fácil">1</button>
-      <button class="diff-btn" data-diff="Medio" title="Medio">2</button>
-      <button class="diff-btn" data-diff="Difícil" title="Difícil">3</button>
+<body class="light">
+  <div class="app-container">
+    <!-- Vistas de Selección de Carpeta -->
+    <div id="folderView" class="folder-view active">
+      <h2>Selecciona Categoría</h2>
+      <ul id="categoryList" class="folder-list"></ul>
     </div>
-    <!-- Área central – Tarjeta -->
-    <div id="cardContainer">
-      <div id="card" class="card flip">
-        <!-- Cara 1: Pregunta -->
-        <div class="card-face face-front" id="cardFront"></div>
-        <!-- Cara 2: Respuesta y explicación -->
-        <div class="card-face face-back" id="cardBack"></div>
+    <div id="subjectView" class="folder-view" style="display:none;">
+      <button class="back-button" onclick="showFolderView()">&#8592; Regresar</button>
+      <h2>Selecciona Asignatura</h2>
+      <ul id="subjectList" class="folder-list"></ul>
+    </div>
+    <div id="topicView" class="folder-view" style="display:none;">
+      <button class="back-button" onclick="showSubjectView()">&#8592; Regresar</button>
+      <h2>Selecciona Tema</h2>
+      <ul id="topicList" class="folder-list"></ul>
+    </div>
+    <!-- Vista de Estudio -->
+    <div id="studyView" class="study-view">
+      <!-- Panel Superior: Barra de Progreso -->
+      <div class="progress-bar" id="progressBar"></div>
+      <!-- Panel Derecho: Controles Interactivos -->
+      <div class="control-panel">
+        <button onclick="exitStudy()" title="Regresar">&#x21A9;</button>
+        <button onclick="toggleDarkMode()" title="Modo Claro/Oscuro">&#9788;</button>
+        <button onclick="setDifficulty('fácil')" title="Fácil">F</button>
+        <button onclick="setDifficulty('medio')" title="Medio">M</button>
+        <button onclick="setDifficulty('difícil')" title="Difícil">D</button>
+      </div>
+      <!-- Área Central: Tarjeta -->
+      <div class="card-area">
+        <div class="card" id="card">
+          <div class="card-face front" id="cardFront">
+            <div id="cardContent"></div>
+            <div id="optionsContainer" class="options"></div>
+          </div>
+          <div class="card-face back" id="cardBack">
+            <div id="cardAnswer"></div>
+            <div id="cardExplanation" style="margin-top:20px; font-size:0.9em;"></div>
+          </div>
+          <div class="nav-arrows">
+            <button onclick="prevQuestion()">&#8592;</button>
+            <button onclick="flipCard()">&#8635;</button>
+            <button onclick="nextQuestion()">&#8594;</button>
+          </div>
+        </div>
       </div>
     </div>
-    <!-- Flechas de navegación -->
-    <button id="prevQuestion" class="nav-arrow" title="Pregunta anterior">&#9664;</button>
-    <button id="flipCard" class="nav-arrow" title="Ver respuesta">&#8635;</button>
-    <button id="nextQuestion" class="nav-arrow" title="Siguiente pregunta">&#9654;</button>
-    <!-- Botón de salida -->
-    <button id="exitStudy" onclick="exitStudy()">Salir</button>
   </div>
-
   <script>
-    /* ===============================
-       Variables globales y estado
-    ================================ */
-    // URL de despliegue del Apps Script (reemplazar YOUR_SCRIPT_ID)
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyelDks7HNa6ov41RZ30ATatXyymU0pNpdh2MDHXC7Pk-ahuRIdRLj-1EVXvDLIHzMb/exec';
+    /* VARIABLES GLOBALES */
+    let sheetData = null;  // Estructura completa (carpetas) desde el backend
+    let deck = [];         // Mazo de preguntas del tema seleccionado
+    let currentQuestionIndex = 0;
+    let darkMode = false;
+    // Variables para la selección de carpeta
+    let selectedCategory = null;
+    let selectedSubject = null;
+    let selectedTopic = null;
+    // URL de despliegue del Apps Script (REEMPLAZAR "YOUR_SCRIPT_URL" por el URL real)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWB__WemfDPevnrxDEnbAijBfNfq9f25Yoe132fflEcwFdGQbs8zNTpPeTezp8P9U/exec";
 
-    let folderData = null;     // Estructura de carpetas: Categorías > Asignaturas > Temas
-    let questions = [];        // Lista de preguntas para el tema seleccionado
-    let currentIndex = 0;      // Índice de la pregunta actual
-    let currentFace = 0;       // 0: Cara de pregunta, 1: Cara de respuesta
-    let studyMode = "light";   // Modo claro u oscuro
-
-    /* ===============================
-       Funciones de carga y navegación
-    ================================ */
-    // Cargar la estructura de carpetas desde el Sheet (GET action=getFolders)
-    function loadFolders() {
-      fetch(SCRIPT_URL + '?action=getFolders')
-      .then(response => response.json())
-      .then(data => {
-        if(data.status === "success") {
-          folderData = data.folders;
+    /* CARGA DE ESTRUCTURA DE CARPETAS */
+    function loadFolderStructure() {
+      fetch(`${SCRIPT_URL}?action=getStructure`)
+      .then(res => res.json())
+      .then(result => {
+        if(result.status === "success") {
+          sheetData = result.data;
           renderCategories();
         } else {
-          alert("Error cargando carpetas: " + data.message);
+          alert("Error al cargar la estructura: " + result.message);
         }
       })
       .catch(err => console.error(err));
     }
-
-    // Renderizar Categorías en selectView
     function renderCategories() {
-      const catList = document.getElementById("catList");
-      catList.innerHTML = "";
-      folderData.forEach(cat => {
+      const categoryList = document.getElementById("categoryList");
+      categoryList.innerHTML = "";
+      sheetData.categories.forEach(cat => {
         const li = document.createElement("li");
         li.className = "folder-item";
         li.textContent = cat.name;
         li.onclick = () => {
-          sessionStorage.setItem("selectedCategory", cat.name);
+          selectedCategory = cat;
           renderSubjects(cat);
-          showView("subjectView");
+          showSubjectView();
         };
-        catList.appendChild(li);
+        categoryList.appendChild(li);
       });
     }
-    // Renderizar Asignaturas
     function renderSubjects(category) {
-      const subjList = document.getElementById("subjList");
-      subjList.innerHTML = "";
-      const selected = folderData.find(c => c.name === category.name);
-      selected.subjects.forEach(subj => {
+      const subjectList = document.getElementById("subjectList");
+      subjectList.innerHTML = "";
+      category.subjects.forEach(sub => {
         const li = document.createElement("li");
         li.className = "folder-item";
-        li.textContent = subj.name;
+        li.textContent = sub.name;
         li.onclick = () => {
-          sessionStorage.setItem("selectedSubject", subj.name);
-          renderTopics(selected, subj);
-          showView("topicView");
+          selectedSubject = sub;
+          renderTopics(category, sub);
+          showTopicView();
         };
-        subjList.appendChild(li);
+        subjectList.appendChild(li);
       });
     }
-    // Renderizar Temas
     function renderTopics(category, subject) {
       const topicList = document.getElementById("topicList");
       topicList.innerHTML = "";
-      subject.topics.forEach(topic => {
+      subject.topics.forEach(top => {
         const li = document.createElement("li");
         li.className = "folder-item";
-        li.textContent = topic;
+        li.textContent = top.name;
         li.onclick = () => {
-          sessionStorage.setItem("selectedTopic", topic);
-          loadQuestions(sessionStorage.getItem("selectedCategory"), sessionStorage.getItem("selectedSubject"), topic);
+          selectedTopic = top;
+          loadDeck(category.name, subject.name, top.name);
+          showStudyView();
         };
         topicList.appendChild(li);
       });
     }
-    // Función para mostrar una vista específica
-    function showView(viewId) {
-      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-      document.getElementById(viewId).classList.add("active");
+    /* CAMBIOS DE VISTA */
+    function showFolderView() {
+      document.getElementById("folderView").style.display = "block";
+      document.getElementById("subjectView").style.display = "none";
+      document.getElementById("topicView").style.display = "none";
+      document.getElementById("studyView").classList.remove("active");
     }
-    // Volver a la vista anterior
-    function goBack(viewId) { showView(viewId); }
-
-    /* ===============================
-       Funciones para cargar y procesar preguntas
-    ================================ */
-    // Cargar preguntas para la combinación: categoría, asignatura, tema
-    function loadQuestions(category, subject, topic) {
-      fetch(`${SCRIPT_URL}?action=getQuestions&category=${encodeURIComponent(category)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`)
-      .then(response => response.json())
-      .then(data => {
-        if(data.status === "success") {
-          questions = data.questions;
-          // Buscar la primera pregunta sin dificultad
-          const idx = questions.findIndex(q => !q.difficulty || q.difficulty === "");
-          currentIndex = (idx >= 0) ? idx : 0;
-          currentFace = 0;
-          renderProgressPanel();
-          renderCard();
-          showStudyInterface();
+    function showSubjectView() {
+      document.getElementById("folderView").style.display = "none";
+      document.getElementById("subjectView").style.display = "block";
+      document.getElementById("topicView").style.display = "none";
+      document.getElementById("studyView").classList.remove("active");
+    }
+    function showTopicView() {
+      document.getElementById("folderView").style.display = "none";
+      document.getElementById("subjectView").style.display = "none";
+      document.getElementById("topicView").style.display = "block";
+      document.getElementById("studyView").classList.remove("active");
+    }
+    function showStudyView() {
+      document.getElementById("folderView").style.display = "none";
+      document.getElementById("subjectView").style.display = "none";
+      document.getElementById("topicView").style.display = "none";
+      document.getElementById("studyView").classList.add("active");
+      currentQuestionIndex = 0;
+      renderProgressBar();
+      displayQuestion();
+    }
+    /* CARGA DEL MAZO (DECK) */
+    function loadDeck(category, subject, topic) {
+      fetch(`${SCRIPT_URL}?action=loadDeck&category=${encodeURIComponent(category)}&subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`)
+      .then(res => res.json())
+      .then(result => {
+        if(result.status === "success") {
+          deck = result.data.deck;
+          // Retomar la primera pregunta sin dificultad asignada
+          const idx = deck.findIndex(q => !q.dificultad || q.dificultad.trim() === "");
+          currentQuestionIndex = idx >= 0 ? idx : 0;
+          renderProgressBar();
+          displayQuestion();
         } else {
-          alert("Error cargando preguntas: " + data.message);
+          alert("Error al cargar el mazo: " + result.message);
         }
       })
       .catch(err => console.error(err));
     }
-    // Mostrar la interfaz de estudio: ocultar vistas de selección y mostrar studyInterface
-    function showStudyInterface() {
-      document.getElementById("selectView").style.display = "none";
-      document.getElementById("subjectView").style.display = "none";
-      document.getElementById("topicView").style.display = "none";
-      document.getElementById("studyInterface").style.display = "block";
-    }
-
-    /* ===============================
-       Renderización de la interfaz de estudio
-    ================================ */
-    // Renderizar el panel superior (progreso)
-    function renderProgressPanel() {
-      const panel = document.getElementById("progressPanel");
-      panel.innerHTML = "";
-      questions.forEach((q, index) => {
+    /* BARRA DE PROGRESO */
+    function renderProgressBar() {
+      const progressBar = document.getElementById("progressBar");
+      progressBar.innerHTML = "";
+      deck.forEach((q, idx) => {
         const div = document.createElement("div");
         div.className = "progress-item";
-        div.textContent = q.id;
-        if(q.difficulty) {
-          if(q.difficulty === "Fácil") div.classList.add("diff-facil");
-          else if(q.difficulty === "Medio") div.classList.add("diff-medio");
-          else if(q.difficulty === "Difícil") div.classList.add("diff-dificil");
+        if(q.dificultad) {
+          const dif = q.dificultad.toLowerCase();
+          if(dif === "fácil") div.classList.add("fácil");
+          else if(dif === "medio") div.classList.add("medio");
+          else if(dif === "difícil") div.classList.add("difícil");
         }
-        panel.appendChild(div);
+        div.textContent = idx + 1;
+        div.onclick = () => {
+          autoMarkDifficulty();
+          currentQuestionIndex = idx;
+          displayQuestion();
+        };
+        progressBar.appendChild(div);
       });
     }
-    // Renderizar la tarjeta (pregunta/respuesta)
-    function renderCard() {
-      if(questions.length === 0) return;
-      const q = questions[currentIndex];
-      const cardFront = document.getElementById("cardFront");
-      const cardBack = document.getElementById("cardBack");
-      // Pregunta tipo test: opciones aleatorias
-      if(q.type.toLowerCase() === "test") {
-        let options = q.answer.split("/").map(o => o.trim());
-        options.sort(() => Math.random() - 0.5);
-        cardFront.innerHTML = `<div><strong>${q.question}</strong></div><br>`;
-        options.forEach(opt => {
-          const btn = document.createElement("button");
-          btn.style.margin = "5px";
-          btn.style.padding = "10px";
-          btn.style.borderRadius = "4px";
-          btn.style.border = "1px solid #333";
-          btn.textContent = opt;
-          btn.onclick = () => {
-            if(opt === q.answer.split("/")[0].trim()) {
-              btn.style.backgroundColor = "#4caf50";
-            } else {
-              btn.style.backgroundColor = "#f44336";
-            }
+    /* MOSTRAR PREGUNTA ACTUAL */
+    function displayQuestion() {
+      if(deck.length === 0) return;
+      const q = deck[currentQuestionIndex];
+      const cardContent = document.getElementById("cardContent");
+      const optionsContainer = document.getElementById("optionsContainer");
+      const cardAnswer = document.getElementById("cardAnswer");
+      const cardExplanation = document.getElementById("cardExplanation");
+      // Reinicia estado de flip
+      document.getElementById("card").classList.remove("flip");
+      cardContent.innerHTML = "";
+      optionsContainer.innerHTML = "";
+      cardAnswer.innerHTML = "";
+      cardExplanation.innerHTML = "";
+      // Cara 1: Mostrar la Pregunta
+      cardContent.textContent = q.Pregunta;
+      // Si es tipo Test, mostrar opciones aleatorias y corrección inmediata
+      if(q["Test o Flashcard"].toLowerCase() === "test") {
+        let opts = q.Respuesta.split("/");
+        opts = opts.map(o => o.trim());
+        opts = shuffleArray(opts);
+        opts.forEach(opt => {
+          const div = document.createElement("div");
+          div.className = "option";
+          div.textContent = opt;
+          div.onclick = () => {
+            const correct = (opt === q.Respuesta.split("/")[0].trim());
+            if(correct) div.classList.add("correct");
+            else div.classList.add("incorrect");
+            // Desactivar más clics
+            Array.from(optionsContainer.children).forEach(child => child.onclick = null);
           };
-          cardFront.appendChild(btn);
+          optionsContainer.appendChild(div);
         });
-      } else {
-        // Flashcard: solo la pregunta
-        cardFront.innerHTML = `<div><strong>${q.question}</strong></div>`;
       }
-      // Cara de respuesta: mostrar respuesta y explicación
-      cardBack.innerHTML = `<div><strong>Respuesta:</strong> ${q.answer}</div><br><div><strong>Explicación:</strong> ${q.explanation}</div>`;
-      const card = document.getElementById("card");
-      card.classList.remove("flipped");
-      currentFace = 0;
+      // Cara 2 y 3: Respuesta y Explicación
+      cardAnswer.textContent = "Respuesta: " + q.Respuesta.split("/")[0].trim();
+      cardExplanation.textContent = "Explicación: " + q.Explicación;
+      renderProgressBar();
     }
-
-    /* ===============================
-       Navegación entre preguntas y caras
-    ================================ */
+    /* UTILIDADES */
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    /* CONTROLES DE LA TARJETA */
+    function flipCard() {
+      document.getElementById("card").classList.toggle("flip");
+    }
     function nextQuestion() {
-      if(!questions[currentIndex].difficulty || questions[currentIndex].difficulty === "") {
-        updateDifficulty(questions[currentIndex], "Fácil");
+      autoMarkDifficulty();
+      if(currentQuestionIndex < deck.length - 1) {
+        currentQuestionIndex++;
+        displayQuestion();
       }
-      if(currentIndex < questions.length - 1) {
-        currentIndex++;
-        currentFace = 0;
-        renderCard();
-      }
-      renderProgressPanel();
     }
     function prevQuestion() {
-      if(currentIndex > 0) {
-        currentIndex--;
-        currentFace = 0;
-        renderCard();
+      autoMarkDifficulty();
+      if(currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        displayQuestion();
       }
     }
-    function flipCard() {
-      const card = document.getElementById("card");
-      card.classList.toggle("flipped");
-      currentFace = (currentFace === 0) ? 1 : 0;
+    // Si la pregunta actual no tiene dificultad asignada, se marca automáticamente como "fácil"
+    function autoMarkDifficulty() {
+      const currentQ = deck[currentQuestionIndex];
+      if(!currentQ.dificultad || currentQ.dificultad.trim() === "") {
+        setDifficulty("fácil", true);
+      }
     }
-    // Actualizar dificultad vía Apps Script
-    function updateDifficulty(question, difficulty) {
-      question.difficulty = difficulty;
-      renderProgressPanel();
+    // Establece la dificultad y actualiza el backend
+    function setDifficulty(level, auto=false) {
+      const currentQ = deck[currentQuestionIndex];
+      currentQ.dificultad = level;
+      renderProgressBar();
+      const payload = {
+        action: "updateDifficulty",
+        category: currentQ.Categoría,
+        subject: currentQ.Asignatura,
+        topic: currentQ.Tema,
+        id: currentQ["id#"],
+        dificultad: level
+      };
       fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          updateDifficulty: true,
-          category: question.category,
-          subject: question.subject,
-          topic: question.topic,
-          id: question.id,
-          difficulty: difficulty
-        })
-      });
+        body: JSON.stringify(payload)
+      }).then(() => {
+        if(!auto) alert("Dificultad actualizada a " + level);
+      }).catch(err => console.error(err));
     }
-
-    /* ===============================
-       Control de botones y eventos
-    ================================ */
-    document.getElementById("nextQuestion").addEventListener("click", nextQuestion);
-    document.getElementById("prevQuestion").addEventListener("click", prevQuestion);
-    document.getElementById("flipCard").addEventListener("click", flipCard);
-    document.getElementById("btnBack").addEventListener("click", () => {
-      document.getElementById("studyInterface").style.display = "none";
-      showView("topicView");
-      document.getElementById("selectView").style.display = "block";
-      document.getElementById("subjectView").style.display = "block";
-      document.getElementById("topicView").style.display = "block";
-    });
-    document.getElementById("btnToggleMode").addEventListener("click", () => {
-      const studyInt = document.getElementById("studyInterface");
-      if(studyInt.classList.contains("dark")) {
-        studyInt.classList.remove("dark");
-        studyMode = "light";
-        document.getElementById("btnToggleMode").innerHTML = "&#9788;";
-      } else {
-        studyInt.classList.add("dark");
-        studyMode = "dark";
-        document.getElementById("btnToggleMode").innerHTML = "&#9790;";
-      }
-    });
-    document.querySelectorAll(".diff-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const diff = btn.getAttribute("data-diff");
-        updateDifficulty(questions[currentIndex], diff);
-        nextQuestion();
-      });
-    });
+    /* CAMBIO DE MODO */
+    function toggleDarkMode() {
+      darkMode = !darkMode;
+      document.body.className = darkMode ? "dark" : "light";
+    }
+    /* SALIR DEL MODO DE ESTUDIO */
+    function exitStudy() {
+      document.getElementById("studyView").classList.remove("active");
+      showFolderView();
+    }
+    /* NAVEGACIÓN CON TECLADO */
     document.addEventListener("keydown", (e) => {
-      if(document.getElementById("studyInterface").style.display === "block") {
+      if(document.getElementById("studyView").classList.contains("active")) {
         if(e.key === "ArrowRight") nextQuestion();
         if(e.key === "ArrowLeft") prevQuestion();
-        if(e.key === " ") { e.preventDefault(); flipCard(); }
+        if(e.key === "ArrowUp" || e.key === " ") flipCard();
       }
     });
-    function exitStudy() {
-      document.getElementById("studyInterface").style.display = "none";
-      showView("topicView");
-    }
-
-    /* ===============================
-       Inicialización
-    ================================ */
-    window.onload = () => {
-      loadFolders();
+    /* INICIO: Cargar estructura al acceder a la página */
+    window.onload = function() {
+      loadFolderStructure();
     };
   </script>
 </body>
